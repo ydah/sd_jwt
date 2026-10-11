@@ -1,16 +1,43 @@
-# SDJWT
+<h1 align="center">SDJWT</h1>
+
+<p align="center">Selective disclosure and holder key binding for Ruby.</p>
+
+<p align="center">
+  <a href="https://rubygems.org/gems/sd_jwt"><img src="https://img.shields.io/gem/v/sd_jwt" alt="Gem version"></a>
+  <a href="https://github.com/ydah/sd_jwt/actions/workflows/main.yml"><img src="https://github.com/ydah/sd_jwt/actions/workflows/main.yml/badge.svg?branch=main" alt="CI"></a>
+  <a href="https://www.ruby-lang.org/"><img src="https://img.shields.io/badge/Ruby-%3E%3D%203.3-CC342D?logo=ruby&amp;logoColor=white" alt="Ruby 3.3 or later"></a>
+  <a href="LICENSE.txt"><img src="https://img.shields.io/badge/license-MIT-blue" alt="MIT License"></a>
+</p>
+
+<p align="center">
+  <a href="#installation">Installation</a> &middot;
+  <a href="#quick-start">Quick start</a> &middot;
+  <a href="#supported-scope">Supported scope</a> &middot;
+  <a href="#development">Development</a> &middot;
+  <a href="#license">License</a>
+</p>
 
 Issue, selectively present, and verify [RFC 9901](https://www.rfc-editor.org/rfc/rfc9901.html) SD-JWTs in Ruby. Signatures use [ruby-jwt](https://github.com/jwt/ruby-jwt) and OpenSSL; this gem implements disclosures, recursive claim processing, and holder key binding.
 
-## Install
+## Features
+
+- Issue credentials with recursive object and array disclosures.
+- Create selective presentations with optional holder key binding.
+- Verify Compact and JWS JSON forms with explicit algorithm and claim policies.
+
+## Installation
+
+Add the gem to your Gemfile:
 
 ```ruby
-gem "sd_jwt", "~> 0.1.0"
+gem "sd_jwt"
 ```
+
+Then run `bundle install`.
 
 Ruby 3.3 or later, JRuby, and TruffleRuby are tested in CI. Runtime dependencies are `json` (2.19.4 or later, including 3.x) and `jwt` (3.3.x). No other gem in the JSON formats family is required.
 
-## Issue and verify
+## Quick start
 
 ```ruby
 require "sd_jwt"
@@ -97,7 +124,7 @@ Default limits are 1 MiB serialized input, 1000 disclosures, nesting depth 32, a
 
 Failures use `SDJWT::ParseError`, `ValidationError` (with `pointer` for disclosure path failures), `ConversionError`, or `VerificationError`, all under `SDJWT::Error`. Library errors omit claim values and salts. Application callback errors remain the application's responsibility.
 
-## Development and reference data
+## Development
 
 ```sh
 bundle install
@@ -116,6 +143,12 @@ Display line wrapping is removed inside encoded strings and token blocks. Origin
 The Ruby suite verifies all eight complete RFC tokens and covers nested claims, array entries, decoys, selective presentations, and key binding. Issuance and holder-binding contract tests also inspect signatures and digest relationships through ruby-jwt and Ruby standard libraries. The Python comparison stack has been removed; current checks do not claim independent implementation interoperability. Previous Python and JavaScript reference use is recorded in [provenance and dependency review](docs/provenance.md). RFC errata were checked on 2026-10-11; none were listed. `script/update_registry.rb` audits the IANA JWT claim registrations without importing registry documents into the package.
 
 For deterministic tests only, explicitly require `sd_jwt/testing` and wrap issuance in `SDJWT::Testing.with_salts([...])`. Never use supplied salts in production.
+
+## Contributing
+
+Bug reports and pull requests are welcome on [GitHub](https://github.com/ydah/sd_jwt/issues). See [Development](#development) for the checks to run before submitting a change. Report security vulnerabilities privately as described in [SECURITY.md](SECURITY.md).
+
+## License
 
 Added runtime and development libraries must offer MIT terms, including transitive dependencies; Ruby runtimes, standard libraries, and bundled tools are explicit exceptions. RFC test inputs keep their own notices and are excluded from the gem.
 
