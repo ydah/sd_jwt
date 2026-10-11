@@ -1,0 +1,14 @@
+# Original protocol metadata; no RFC text, examples, or grammars are included.
+claims:
+  _sd: {type: array_of_digest_strings, section: '4.2.4.1'}
+  '...': {type: digest_string, section: '4.2.4.2'}
+  _sd_alg: {type: hash_algorithm, section: '4.1.1'}
+  sd_hash: {type: presentation_digest, section: '4.3'}
+hash_algorithms:
+  sha-256: {bytes: 32, default: true}
+  sha-384: {bytes: 48, default: false}
+  sha-512: {bytes: 64, default: false}
+media_types:
+  - application/sd-jwt
+  - application/sd-jwt+json
+  - application/kb+jwt

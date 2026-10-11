@@ -1,0 +1,71 @@
+module SDJWT
+  VERSION: String
+  type json = nil | bool | Integer | Float | String | Array[json] | Hash[String, json]
+  def self.parse: (String source, ?max_bytes: Integer, ?max_depth: Integer, ?max_disclosures: Integer, ?max_signatures: Integer, ?strict: bool) -> Token
+
+  class Error < StandardError
+  end
+  class ParseError < Error
+  end
+  class ValidationError < Error
+    attr_reader pointer: String
+    def initialize: (String message, ?pointer: String) -> void
+  end
+  class ConversionError < Error
+  end
+  class VerificationError < Error
+  end
+
+  class Disclosure
+    attr_reader encoded: String
+    attr_reader salt: String
+    attr_reader name: String?
+    attr_reader value: json
+    def self.parse: (String, ?max_depth: Integer) -> Disclosure
+    def initialize: (Array[json], ?encoded: String?, ?max_depth: Integer) -> void
+    def digest: (?String) -> String
+    def array_element?: () -> bool
+    def to_s: () -> String
+  end
+
+  module HashAlg
+    def self.digest: (String, ?String) -> String
+  end
+
+  class Issuer
+    def initialize: (signing_key: untyped, ?alg: String, ?hash_alg: String, ?max_bytes: Integer, ?max_depth: Integer, ?max_disclosures: Integer) -> void
+    def issue: (Hash[String, json], ?disclose: Array[String], ?decoys: Integer, ?holder_jwk: Hash[String, json]?, ?header: Hash[String, json]) -> Token
+  end
+
+  class Token
+    attr_reader signatures: Array[Hash[String, untyped]]
+    attr_reader warnings: Array[String]
+    def disclosures: () -> Array[String]
+    def issuer_jwt: () -> String
+    def key_binding_jwt: () -> String?
+    def unverified_claims: () -> Hash[String, json]
+    def disclosed_paths: () -> Array[String]
+    def to_s: () -> String
+    def to_json: (*untyped, ?format: :flattened | :general) -> String
+    def present: (only: Array[String], ?key_binding: Hash[Symbol, untyped]?) -> Token
+  end
+
+  class Result
+    attr_reader claims: Hash[String, json]
+    attr_reader headers: Array[Hash[String, json]]
+    attr_reader key_binding_verified: bool
+  end
+
+  class Verifier
+    def initialize: (algorithms: Array[String], issuer_key: untyped, ?hash_algorithms: Array[String], ?require_key_binding: bool,
+      ?audience: String?, ?nonce: String?, ?max_kb_age: Numeric, ?key_binding_algorithms: Array[String], ?required_claims: Array[String],
+      ?issuer: String?, ?leeway: Numeric, ?max_bytes: Integer, ?max_depth: Integer, ?max_disclosures: Integer, ?max_signatures: Integer) -> void
+    def verify: (String | Token) -> Result
+  end
+
+  module Testing
+    def self.with_salts: [T] (Array[String]) { () -> T } -> T
+  end
+end
+
+module SdJwt = SDJWT
