@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Issue, selectively present, and verify RFC 9901 SD-JWTs in Ruby. Use ruby-jwt and OpenSSL for signatures, with recursive disclosures and holder key binding handled by the gem.">
+  <meta name="theme-color" content="#f8fafc">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="sd_jwt — Share selected claims with verifiable presentations">
+  <meta property="og:description" content="Issue, selectively present, and verify RFC 9901 SD-JWTs in Ruby. Use ruby-jwt and OpenSSL for signatures, with recursive disclosures and holder key binding handled by the gem.">
+  <meta property="og:url" content="https://ydah.github.io/sd_jwt/">
+  <title>sd_jwt — Share selected claims with verifiable presentations</title>
+  <link rel="canonical" href="https://ydah.github.io/sd_jwt/">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="site.css">
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="site-header">
+    <div class="container header-inner">
+      <a class="brand" href="./" aria-label="sd_jwt home"><img src="favicon.svg" width="32" height="32" alt=""><span>sd_jwt</span></a>
+      <nav class="nav" aria-label="Main navigation">
+        <a href="#installation">Installation</a>
+        <a href="https://github.com/ydah/sd_jwt#readme">Documentation</a>
+        <a href="https://github.com/ydah/sd_jwt">GitHub</a>
+      </nav>
+    </div>
+  </header>
+  <main id="main" class="container" tabindex="-1">
+    <section class="hero" aria-labelledby="title">
+      <div class="hero-copy">
+        <p class="format">SD-JWT / Compact · JWS JSON</p>
+        <h1 id="title">Share selected claims with verifiable presentations</h1>
+        <p class="intro">Issue, selectively present, and verify RFC 9901 SD-JWTs in Ruby. Use ruby-jwt and OpenSSL for signatures, with recursive disclosures and holder key binding handled by the gem.</p>
+        <div class="actions">
+          <a class="button" href="#installation">Get started</a>
+          <a class="text-link" href="https://github.com/ydah/sd_jwt#readme">Read the documentation</a>
+        </div>
+        <p class="metadata"><span>Ruby 3.3+</span><a href="https://github.com/ydah/sd_jwt/blob/main/LICENSE.txt">MIT license</a><a href="https://rubygems.org/gems/sd_jwt">RubyGems</a></p>
+      </div>
+      <figure class="example" id="quick-start">
+        <figcaption><span>Quick start</span><span>Ruby</span></figcaption>
+        <pre tabindex="0" role="region" aria-label="Ruby quick start example"><code>require <span class="token-string">&quot;</span><span class="token-string">sd_jwt</span><span class="token-string">&quot;</span>
+
+issuer_key = OpenSSL::PKey::EC.generate(<span class="token-string">&quot;</span><span class="token-string">prime256v1</span><span class="token-string">&quot;</span>)
+holder_key = OpenSSL::PKey::EC.generate(<span class="token-string">&quot;</span><span class="token-string">prime256v1</span><span class="token-string">&quot;</span>)
+holder_jwk = JWT::JWK.new(holder_key).export.transform_keys(&amp;:to_s)
+
+issuer = SDJWT::Issuer.new(signing_key: issuer_key, alg: <span class="token-string">&quot;</span><span class="token-string">ES256</span><span class="token-string">&quot;</span>)
+credential = issuer.issue(
+  { <span class="token-string">&quot;</span><span class="token-string">iss</span><span class="token-string">&quot;</span> =&gt; <span class="token-string">&quot;</span><span class="token-string">https://issuer.example</span><span class="token-string">&quot;</span>, <span class="token-string">&quot;</span><span class="token-string">exp</span><span class="token-string">&quot;</span> =&gt; Time.now.to_i + 3600,
+    <span class="token-string">&quot;</span><span class="token-string">name</span><span class="token-string">&quot;</span> =&gt; <span class="token-string">&quot;</span><span class="token-string">Example</span><span class="token-string">&quot;</span>, <span class="token-string">&quot;</span><span class="token-string">address</span><span class="token-string">&quot;</span> =&gt; { <span class="token-string">&quot;</span><span class="token-string">street</span><span class="token-string">&quot;</span> =&gt; <span class="token-string">&quot;</span><span class="token-string">Harbor Street</span><span class="token-string">&quot;</span>, <span class="token-string">&quot;</span><span class="token-string">city</span><span class="token-string">&quot;</span> =&gt; <span class="token-string">&quot;</span><span class="token-string">Port</span><span class="token-string">&quot;</span> } },
+  disclose: [<span class="token-string">&quot;</span><span class="token-string">/name</span><span class="token-string">&quot;</span>, <span class="token-string">&quot;</span><span class="token-string">/address</span><span class="token-string">&quot;</span>, <span class="token-string">&quot;</span><span class="token-string">/address/street</span><span class="token-string">&quot;</span>],
+  decoys: 2,
+  holder_jwk: holder_jwk,
+  header: { <span class="token-string">&quot;</span><span class="token-string">typ</span><span class="token-string">&quot;</span> =&gt; <span class="token-string">&quot;</span><span class="token-string">example+sd-jwt</span><span class="token-string">&quot;</span>, <span class="token-string">&quot;</span><span class="token-string">kid</span><span class="token-string">&quot;</span> =&gt; <span class="token-string">&quot;</span><span class="token-string">key-1</span><span class="token-string">&quot;</span> }
+)
+
+held = SDJWT.parse(credential.to_s) <span class="token-comment"># Unauthenticated holder-side parsing.
+</span>presentation = held.present(
+  only: [<span class="token-string">&quot;</span><span class="token-string">/name</span><span class="token-string">&quot;</span>],
+  key_binding: { key: holder_key, alg: <span class="token-string">&quot;</span><span class="token-string">ES256</span><span class="token-string">&quot;</span>, aud: <span class="token-string">&quot;</span><span class="token-string">https://verifier.example</span><span class="token-string">&quot;</span>, nonce: <span class="token-string">&quot;</span><span class="token-string">transaction-nonce</span><span class="token-string">&quot;</span> }
+)
+
+verifier = SDJWT::Verifier.new(
+  algorithms: [<span class="token-string">&quot;</span><span class="token-string">ES256</span><span class="token-string">&quot;</span>],
+  issuer_key: issuer_key, <span class="token-comment"># Or -&gt;(untrusted_header, untrusted_payload) { trusted_key_lookup(...) }
+</span>  issuer: <span class="token-string">&quot;</span><span class="token-string">https://issuer.example</span><span class="token-string">&quot;</span>,
+  required_claims: [<span class="token-string">&quot;</span><span class="token-string">iss</span><span class="token-string">&quot;</span>, <span class="token-string">&quot;</span><span class="token-string">exp</span><span class="token-string">&quot;</span>, <span class="token-string">&quot;</span><span class="token-string">cnf</span><span class="token-string">&quot;</span>],
+  require_key_binding: <span class="token-keyword">true</span>,
+  audience: <span class="token-string">&quot;</span><span class="token-string">https://verifier.example</span><span class="token-string">&quot;</span>,
+  nonce: <span class="token-string">&quot;</span><span class="token-string">transaction-nonce</span><span class="token-string">&quot;</span>,
+  max_kb_age: 300
+)
+result = verifier.verify(presentation)
+result.claims                    <span class="token-comment"># Immutable, authenticated disclosed claims.
+</span>result.key_binding_verified      <span class="token-comment"># true</span></code></pre>
+      </figure>
+    </section>
+    <ul class="features" aria-label="Features">
+        <li><h2>Issue disclosures</h2><p>Create credentials with selectively disclosed object claims, array entries, and nested values.</p></li>
+        <li><h2>Choose what to share</h2><p>Select disclosure paths and bind a presentation to a holder key, audience, and transaction nonce.</p></li>
+        <li><h2>Set verification policy</h2><p>Verify Compact and JWS JSON forms with explicit algorithms, issuer trust, required claims, and limits.</p></li>
+    </ul>
+    <section class="section" id="installation" aria-labelledby="installation-title">
+      <h2 id="installation-title">Installation</h2>
+      <div class="section-body">
+        <p>Add the gem to your Gemfile:</p>
+        <pre class="install-command" tabindex="0" role="region" aria-label="Gemfile entry"><code>gem "sd_jwt"</code></pre>
+        <p>Run <code>bundle install</code>, then try the <a href="#quick-start">quick start</a>. Requires Ruby 3.3 or later.</p>
+        <p>For supported dependencies and optional integrations, see the <a href="https://github.com/ydah/sd_jwt#installation">installation guide</a>.</p>
+      </div>
+    </section>
+    <section class="section" aria-labelledby="scope-title">
+      <h2 id="scope-title">Scope &amp; documentation</h2>
+      <div class="section-body">
+        <p>Applications must establish issuer trust and manage nonce replay protection, revocation, and credential profile rules. Parsing alone does not authenticate a credential. EdDSA, symmetric holder keys, and SD-CWT are outside scope.</p>
+        <p><a href="https://github.com/ydah/sd_jwt#readme">Read the full documentation</a> for supported formats, examples, and API details.</p>
+        <p class="security-note">No independent external human security audit has been completed. Automated tests and RFC conformance checks do not replace such an audit. <a href="https://github.com/ydah/sd_jwt/blob/main/SECURITY.md">Security policy</a>.</p>
+        <ul class="resource-links" aria-label="Project resources">
+          <li><a href="https://github.com/ydah/sd_jwt/blob/main/CHANGELOG.md">Changelog</a></li>
+          <li><a href="https://github.com/ydah/sd_jwt/issues">Report an issue</a></li>
+          <li><a href="https://github.com/ydah/sd_jwt/blob/main/SECURITY.md">Security</a></li>
+          <li><a href="https://github.com/ydah/sd_jwt#contributing">Contributing</a></li>
+        </ul>
+      </div>
+    </section>
+  </main>
+  <footer class="container site-footer">
+    <div class="footer-top"><p>sd_jwt · Maintained by <a href="https://github.com/ydah">ydah</a></p><p>Open source under the <a href="https://github.com/ydah/sd_jwt/blob/main/LICENSE.txt">MIT license</a>.</p></div>
+    <nav class="related" aria-label="Related Ruby gems">
+      <p>More Ruby gems for structured data</p>
+      <ul>
+          <li><a href="https://ydah.github.io/dns_json/">dns_json</a></li>
+          <li><a href="https://ydah.github.io/iodef/">iodef</a></li>
+          <li><a href="https://ydah.github.io/jcard_jcal/">jcard_jcal</a></li>
+          <li><a href="https://ydah.github.io/jscalendar/">jscalendar</a></li>
+          <li><a href="https://ydah.github.io/jscontact/">jscontact</a></li>
+          <li><a href="https://ydah.github.io/senml/">senml</a></li>
+          <li><a href="https://ydah.github.io/yang_json/">yang_json</a></li>
+      </ul>
+    </nav>
+  </footer>
+</body>
+</html>
