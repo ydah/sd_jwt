@@ -18,13 +18,7 @@
   <a href="#license">License</a>
 </p>
 
-Issue, selectively present, and verify [RFC 9901](https://www.rfc-editor.org/rfc/rfc9901.html) SD-JWTs in Ruby. Signatures use [ruby-jwt](https://github.com/jwt/ruby-jwt) and OpenSSL; this gem implements disclosures, recursive claim processing, and holder key binding.
-
-## Features
-
-- Issue credentials with recursive object and array disclosures.
-- Create selective presentations with optional holder key binding.
-- Verify Compact and JWS JSON forms with explicit algorithm and claim policies.
+Issue, selectively present, and verify [RFC 9901](https://www.rfc-editor.org/rfc/rfc9901.html) SD-JWTs in Ruby, with signatures provided by [ruby-jwt](https://github.com/jwt/ruby-jwt) and OpenSSL.
 
 ## Installation
 
@@ -36,7 +30,7 @@ gem "sd_jwt"
 
 Then run `bundle install`.
 
-Ruby 3.3 or later, JRuby, and TruffleRuby are tested in CI. Runtime dependencies are `json` (2.19.4 or later, including 3.x) and `jwt` (3.3.x). No other gem in the JSON formats family is required.
+Requires Ruby 3.3 or later, `json` >= 2.19.4, < 4, and `jwt` 3.3.x.
 
 ## Quick start
 
@@ -78,11 +72,11 @@ result.claims                    # Immutable, authenticated disclosed claims.
 result.key_binding_verified      # true
 ```
 
-Keys in claim and header hashes must be strings. Values must be JSON data. Generation rejects reserved `_sd`, `_sd_alg`, and `...` members. `SdJwt` is a compatibility alias for `SDJWT`.
+Claim and header hashes require string keys and JSON values. Generation rejects reserved `_sd`, `_sd_alg`, and `...` members. `SdJwt` is an alias for `SDJWT`.
 
-Use `token.disclosed_paths` to enumerate available disclosure paths. `present(only:)` automatically includes disclosed parents needed by a selected child. Selecting a parent includes its directly visible contents, but does not select separately hidden children. Array indices refer to the original issuer payload: hidden array entries disappear from the verified result. Selecting no paths sends no disclosures. Creating a new presentation removes an existing KB-JWT; pass `key_binding:` to bind the new presentation.
+Use `token.disclosed_paths` to list available disclosures. `present(only:)` includes parents required by selected children, but selecting a parent does not reveal separately hidden children. Array indices refer to the original payload; hidden entries disappear from the verified result. An empty selection sends no disclosures. Each new presentation removes any existing KB-JWT; pass `key_binding:` to bind it again.
 
-`decoys:` adds that many digests to each object `_sd` array, including arrays within parent disclosures. It does not add dummy array elements. Digest arrays are sorted. Salts contain 128 random bits. The total number of issued disclosures and decoys is bounded by `max_disclosures`.
+`decoys:` adds digests to each object's `_sd` array, including disclosed objects, without adding dummy array elements. Digest arrays are sorted, salts contain 128 random bits, and `max_disclosures` bounds the combined disclosure and decoy count.
 
 ## Supported scope
 
@@ -99,7 +93,7 @@ Use `token.disclosed_paths` to enumerate available disclosure paths. `present(on
 | EdDSA, symmetric holder keys, other `cnf` methods, custom JOSE critical extensions, unencoded payloads | Unsupported |
 | CBOR SD-CWT | Unsupported |
 
-`none` is always rejected. Holder keys are P-256/P-384/P-521 or RSA with a 2048–8192 bit odd modulus and an odd public exponent of at least 3. RSA issuer keys also require at least 2048 bits and a valid public exponent. HMAC requires random secrets of at least 32/48/64 bytes for HS256/384/512; PEM, DER, and SSH asymmetric key encodings are rejected as HMAC secrets. Applications may restrict holder signature algorithms further with `key_binding_algorithms:`. Signing uses jwt's token API; JSON signatures, including unprotected `alg`, use its JWA implementation over the unchanged encoded input. PSS verification calls OpenSSL directly to enforce JOSE's exact salt length, which ruby-jwt's permissive PSS verification does not enforce. No signature primitive is implemented here.
+`none` is always rejected. Holder keys must be P-256/P-384/P-521 or RSA with a 2048–8192 bit odd modulus and an odd exponent of at least 3. RSA issuer keys require at least 2048 bits and a valid exponent. HMAC requires random secrets of at least 32/48/64 bytes for HS256/384/512; PEM, DER, and SSH asymmetric key encodings are rejected as HMAC secrets. Use `key_binding_algorithms:` to further restrict holder algorithms.
 
 ## JWS JSON
 
@@ -111,9 +105,9 @@ verifier.verify(SDJWT.parse(flattened).present(only: ["/name"], key_binding: {
 }))
 ```
 
-General JSON verification requires **every signature** to pass. RFC 9901 section 8.3 places `disclosures` and `kb_jwt` only in the first signature's unprotected header; the same disclosure set is processed for all signatures, and key binding covers the first signature's Compact representation. Additional signatures are preserved when presenting. A multi-signature token must be written as General JSON. A token with other unprotected headers must remain JSON because Compact cannot retain those headers. Issuance creates one signature; externally co-signed General tokens are accepted.
+General JSON verification requires **every signature** to pass. Disclosures and `kb_jwt` belong to the first signature's unprotected header; all signatures share those disclosures, and key binding covers the first signature's Compact representation. Presentations retain additional signatures. Multi-signature tokens require General JSON; tokens with other unprotected headers must also remain JSON. Issuance creates one signature; externally co-signed tokens are accepted.
 
-Unprotected headers are not trustworthy identity evidence. Even protected headers and payloads passed to a key resolver have not yet been authenticated. Restrict `iss`/`kid` resolution to an explicit trust configuration; never fetch arbitrary header URLs. `headers` contains the merged headers for each verified signature; use the original `signatures` representation to distinguish protected from unprotected metadata.
+Unprotected headers are not identity evidence, and key resolver inputs are not yet authenticated. Resolve `iss`/`kid` against an explicit trust configuration; never fetch arbitrary header URLs. `headers` merges verified signature headers; inspect `signatures` to distinguish protected from unprotected metadata.
 
 ## Verification policy and limits
 
@@ -137,20 +131,14 @@ bundle exec ruby script/check_licenses.rb
 bundle exec ruby script/benchmark.rb
 ```
 
-Tests fetch RFC 9901 by a pinned SHA-256 into ignored `tmp/rfc/sources`, then extract all 57 source/artwork blocks and 87 fixed disclosure/digest pairs into ignored `tmp/rfc/fixtures`, with the source notices and Revised BSD notification. Nothing fetched is committed or packaged. The package includes only this project's MIT implementation, original protocol metadata, types, and documentation.
-
-Display line wrapping is removed inside encoded strings and token blocks. Original text and the extraction inventory are retained next to each fixture. Illustrative snippets with ellipses remain text. The section 8.3 General example uses two illustrative signatures that do not verify with the Appendix A.5 key; it is tested for structural preservation and disclosure reconstruction, with signature rejection explicitly checked. Generated two-key General tokens test successful all-signature verification. Issuance uses compact JSON, while RFC disclosures often contain spaces; original RFC disclosures and digests are checked byte-for-byte, and deterministic issuance is tested separately with compact encoding.
-
-The Ruby suite verifies all eight complete RFC tokens and covers nested claims, array entries, decoys, selective presentations, and key binding. Issuance and holder-binding contract tests also inspect signatures and digest relationships through ruby-jwt and Ruby standard libraries. The Python comparison stack has been removed; current checks do not claim independent implementation interoperability. Previous Python and JavaScript reference use is recorded in [provenance and dependency review](docs/provenance.md). RFC errata were checked on 2026-10-11; none were listed. `script/update_registry.rb` audits the IANA JWT claim registrations without importing registry documents into the package.
+The first test run downloads checksum-pinned RFC fixtures into ignored `tmp/` directories and requires network access.
 
 For deterministic tests only, explicitly require `sd_jwt/testing` and wrap issuance in `SDJWT::Testing.with_salts([...])`. Never use supplied salts in production.
 
 ## Contributing
 
-Bug reports and pull requests are welcome on [GitHub](https://github.com/ydah/sd_jwt/issues). See [Development](#development) for the checks to run before submitting a change. Report security vulnerabilities privately as described in [SECURITY.md](SECURITY.md).
+Bug reports and pull requests are welcome on [GitHub](https://github.com/ydah/sd_jwt/issues). See [Development](#development) for local checks and [SECURITY.md](SECURITY.md) for private vulnerability reporting and audit status.
 
 ## License
 
-Added runtime and development libraries must offer MIT terms, including transitive dependencies; Ruby runtimes, standard libraries, and bundled tools are explicit exceptions. RFC test inputs keep their own notices and are excluded from the gem.
-
-See [SECURITY.md](SECURITY.md) for reporting and audit status. Released under the [MIT license](LICENSE.txt).
+Released under the [MIT License](LICENSE.txt).
